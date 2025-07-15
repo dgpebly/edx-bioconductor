@@ -323,3 +323,101 @@ res = select(Homo.sapiens, keys = keys,
              columns = c("SYMBOL", "GENENAME"), keytype="GENEID")
 res
 res[1:2,]
+
+
+
+## dnastring object
+library(Biostrings)
+# define a dnastring
+dna <- DNAString("TCGAGCAAT")
+dna
+length(dna)
+# invalid base:
+DNAString("JQX")
+# valid sequence with unknowns and gaps:
+DNAString("NNNACGCGC-TTA-CGGGCTANN")
+# index into a dnastring:
+dna[4:6]
+# convert dnastring back to character string:
+as.character(dna)
+# combine multiple dna sequences:
+set1 <- DNAStringSet(c("TCA", "AAATCG", "ACGTGCCTA", 
+                       "CGCGCA", "GTT", "TCA"))
+set1
+set1[2:3] # extract sequence subset
+set1[[4]] # extract one sequence as a single dnastring
+length(set1) # returns set length not size of each sequence
+width(set1) # returns size of each individual sequence
+duplicated(set1) # tells us which sequences are duplicated
+unique(set1) # keeps only unique sequences
+sort(set1) # sort sequences alphabetically 
+# consider the dna sequence:
+dna_seq <- DNAString("ATCGCGCGCGGCTCTTTTAAAAAAACGCTACTACCATGTGTGTCTATC")
+letterFrequency(dna_seq, "A") # count times specific letter appears
+letterFrequency(dna_seq, "GC") # counts times letters appear together
+# can see frequency of all dinucleotides and trinucleotides
+dinucleotideFrequency(dna_seq)
+trinucleotideFrequency(dna_seq)
+# reverse complement of dnastring:
+reverseComplement(dna_seq)
+# amino acid translation of dnastring:
+translate(dna_seq)
+# count number of occurences of pattern and find location of those patterns
+dna_seq <- DNAString("ATCGCGCGCGGCTCTTTTAAAAAAACGCTACTACCATGTGT")
+dna_seq
+countPattern("CG", dna_seq)
+matchPattern("CG", dna_seq)
+start(matchPattern("CG", dna_seq))
+matchPattern("CTCTTTTAAAAAAACGCTACTACCATGTG", dna_seq)
+# dna is double stranded so we may want to check for reverse complement:
+countPattern("TAG", dna_seq)
+countPattern(reverseComplement(DNAString("TAG")), dna_seq)
+# can also count and locate patterns in dnastring objects:
+set2 <- DNAStringSet(c("AACCGGTTTCGA", "CATGCTGCTACA",
+                       "CGATCGCGCCGG", "TACAACCGTACA"))
+set2
+# count number of occurences of pattern across many biostrings:
+vcountPattern("CG", set2)
+# return locations of pattern across many biostrings:
+vmatchPattern("CG", set2)
+# work with matches from a single string in a set:
+vmatchPattern("CG", set2)[[1]]
+
+eco <- DNAString("GGTTTCACCGCCGGTAATGAAAAAGGCGAACTGGTGGTGCTTGGACGCAACGGTTCCGACTACTCTGCTGCGGTGCTGGCTGCCTGTTTACGCGCCGATTGTTGCGAGATTTGGACGGACGTTGACGGGGTCTATACCTGCGACCCGCGTCAGGTGCCCGATGCGAGGTTGTTGAAGTCGA")
+eco
+dinucleotideFrequency(eco)
+trinucleotideFrequency(eco)
+translate(eco)
+reverseComplement(eco)
+countPattern("ATG", eco)
+countPattern("TATA", eco)
+
+
+
+## getting the sequence of regions
+library(ERBS)
+data(HepG2)
+HepG2
+BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
+library(BSgenome.Hsapiens.UCSC.hg19)
+Hsapiens
+c17 = Hsapiens$chr17
+c17
+class(Hsapiens)
+hepseq = getSeq(Hsapiens, HepG2)
+hepseq
+length(HepG2)
+width(HepG2)[1:5]
+# shift binding regions so there is no principled relationship to binding peaks:
+rhepseq = getSeq(Hsapiens, shift(HepG2, 2500)) 
+rhepseq
+mot = "TCAAGGTCA" # the motif we are investigating
+vcountPattern(mot, hepseq)
+# frequency of motif appearance:
+sum(vcountPattern(mot, hepseq))
+sum(vcountPattern(mot, reverseComplement(hepseq)))
+sum(vcountPattern(mot, reverseComplement(hepseq)))+
+  sum(vcountPattern(mot, hepseq))
+sum(vcountPattern(mot, reverseComplement(rhepseq)))+
+  sum(vcountPattern(mot, rhepseq))
+# there is roughly a 9 fold enrichment of sequences under the binding peaks of ER protein
