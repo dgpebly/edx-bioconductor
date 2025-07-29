@@ -135,3 +135,61 @@ genome(imp) = "hg19" # set genome
 genome(imp)
 export(imp, "demoex.bed") # export as BED format
 cat(readLines("demoex.bed", n=5), sep="\n") # check output file
+
+
+## OrgDb: unified organism specific annotation for systems biology
+# load human OrgDb and inspect available keys
+library(org.Hs.eg.db)
+org.Hs.eg.db
+keytypes(org.Hs.eg.db)
+# load GO.db and inspect available terms
+library(GO.db)
+allterms = keys(GO.db, keytype="TERM")
+allterms[1:5]
+# find GOID (gene ontology tag) for ribosome biogenesis
+select(GO.db, keys="ribosome biogenesis", keytype="TERM", 
+       columns="GOID")
+# find symbols for genes involved in ribosome biogenesis
+select(org.Hs.eg.db, keys="GO:0042254", keytype="GO",
+       columns="SYMBOL")
+# pull out multiple columns at once
+select(org.Hs.eg.db, keys="GO:0042254", keytype="GO",
+       columns=c("SYMBOL", "ENTREZID"))
+# find gene ontology tags related to ZNF658 which has the specified ENTREZID
+select(org.Hs.eg.db, keys="26149", keytype="ENTREZID", columns="GO")
+# save GO tags to a character vector
+select(org.Hs.eg.db, keys="26149", keytype="ENTREZID", 
+       columns="GO")$"GO"
+myk=.Last.value
+# identify biological processes ZNF658 is involved in
+select(GO.db, keys=myk, columns="TERM")
+
+
+## using kyoto encyclopedia of genes and genomes (KEGG)
+# load KEGGREST package and inspect organism-specific gene pathways
+library(KEGGREST)
+brca2k = keggGet("hsa:675") # reference to specific gene
+names(brca2k[[1]])
+brpat = keggGet("path:hsa05212") # info on pathway
+brpat[[1]]$GENE[seq(1,132,2)] # entrex gene ids for pathway
+# inspect some entrez id
+select(org.Hs.eg.db, keys="5888", keytype="ENTREZID", columns="SYMBOL")
+select(org.Hs.eg.db, keys="675", keytype="ENTREZID", columns="SYMBOL")
+# diagram showing structure of network
+library(png)
+library(grid)
+brpng = keggGet("hsa05212", "image")
+grid.raster(brpng)
+
+
+## EMBL's ontology lookup service
+library(rols)
+oo = Ontologies()
+oo
+oo[[1]]
+glis = OlsSearch("glioblastoma")
+glis
+res = olsSearch(glis)
+resdf = as(res, "data.frame") # get content
+resdf[1:4,1:4]
+resdf[1,5] # full description for one instance
