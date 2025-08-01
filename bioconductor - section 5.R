@@ -184,7 +184,7 @@ axis(2,at=c(0.1,0.9), c("before", "after"), las=2)
 segments((rtt$s^2)[idx], rep(0.1,n),
          fit$s2.post[idx], rep(0.9,n))
 
-
+## NOTE - WASN'T ABLE TO GET PORTION OF CODE TO WORK. possibly bc it is outdated.
 ## gene sets (summary statistics)
 # preparing data
 BiocManager::install(c("sva", "hgfocus.db"))
@@ -236,5 +236,77 @@ class(gfiles[["genesets"]])
 tab <- table(ingeneset=1:nrow(e) %in% gsids[["chrYq11"]], signif=qval<0.05)
 tab # object gsids not found - tab won't work.
 # gene set summary statistics
+## END CODE THAT DOESN'T WORK
 
-
+## gene testing in r - part 1 and 2
+library(GEOquery)
+g <- getGEO("GSE34313")
+e <- g[[1]]
+e$condition <- e$characteristics_ch1.2
+e$condition
+table(e$condition)
+# examine boxplots - subset control samples and samples treated with dexamethasone
+boxplot(exprs(e), range=0)
+names(fData(e))
+levels(e$condition) <- c("treatment: dexamethasone for 24 hr", "treatment: dexamethasone for 4 hr", "treatment: none")
+lvls <- c("treatment: dexamethasone for 4 hr", "treatment: none")
+es <- e[,e$condition %in% lvls]
+es$condition <- factor(es$condition, levels=lvls)
+es$condition
+# run linear model in limma
+library(limma)
+design <- model.matrix(~ es$condition)
+fit <- lmFit(es, design=design)
+fit <- eBayes(fit)
+tt <- topTable(fit, coef=2, genelist=fData(es)$GENE_SYMBOL)
+tt
+# immune response:
+idx <- grep("GO:0006955", fData(es)$GO_ID)
+length(idx)
+r1 <- roast(es, idx, design)
+r1
+# testing multiple gene sets:
+BiocManager::install("org.Hs.eg.db")
+library(org.Hs.eg.db)
+org.Hs.egGO2EG
+go2eg <- as.list(org.Hs.egGO2EG)
+head(go2eg)
+# unlist the list and match Entrez ID to index in ExpressionSet:
+govector <- unlist(go2eg)
+golengths <- sapply(go2eg, length)
+head(fData(es)$GENE)
+idxvector <- match(govector, fData(es)$GENE)
+table(is.na(idxvector))
+idx <- split(idxvector, rep(names(go2eg), golengths))
+go2eg[[1]]
+fData(es)$GENE[idx[[1]]]
+# clean lists:
+idxclean <- lapply(idx, function(x) x[!is.na(x)])
+idxlengths <- sapply(idxclean, length)
+idxsub <- idxclean[idxlengths > 10]
+length(idxsub)
+# run multiple ROAST test
+r2 <- mroast(es, idxsub, design) # doesn't work - no residual degrees of freedom
+head(r2)
+r2 <- r2[order(r2$PValue.Mixed),]
+# extract GO terms for top results by mixed test
+BiocManager::install("GO.db")
+library(GO.db)
+columns(GO.db)
+keytypes(GO.db)
+GOTERM[[rownames(r2)[1]]]
+r2tab <- select(GO.db, keys=rownames(r2)[1:10],
+                columns=c("GOID", "TERM", "DEFINITION"),
+                keytype="GOID")
+r2tab[,1:2]
+# look for top results using standard p value in up direction:
+r2 <- r2[order(r2$PValue),]
+r2tab <- select(GO.db, keys=rownames(r2)[r2$Direction=="Up"][1:10],
+                columns = c("GOID", "TERM", "DEFINITION"),
+                keytype="GOID")
+r2tab[,1:2]
+# for down direction:
+r2tab <- select(GO.db, keys=rownames(r2)[r2$Direction=="Down"][1:5],
+                columns = c("GOID", "TERM", "DEFINITION"),
+                keytype="GOID")
+r2tab[,1:2]
